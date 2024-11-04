@@ -1,0 +1,139 @@
+
+global:
+  resolve_timeout: 5m
+  http_config: {}
+  smtp_hello: localhost
+  smtp_require_tls: true
+  pagerduty_url: https://events.pagerduty.com/v2/enqueue
+  hipchat_api_url: https://api.hipchat.com/
+  opsgenie_api_url: https://api.opsgenie.com/
+  wechat_api_url: https://qyapi.weixin.qq.com/cgi-bin/
+  victorops_api_url: https://alert.victorops.com/integrations/generic/20131114/alert/
+route:
+  receiver: "null"
+  group_by:
+  - job
+  routes:
+  - receiver: "null"
+    group_by:
+    - alertname
+    - severity
+    continue: true
+    routes:
+    - receiver: "null"
+      match:
+        alertname: KubeQuotaExceeded
+    - receiver: "null"
+      match:
+        alertname: UsingDeprecatedAPIAppsV1Beta1
+    - receiver: "null"
+      match:
+        alertname: UsingDeprecatedAPIAppsV1Beta2
+    - receiver: "null"
+      match:
+        alertname: UsingDeprecatedAPIExtensionsV1Beta1
+    - receiver: "null"
+      match:
+        alertname: CPUThrottlingHigh
+        container: registry-server
+    - receiver: "null"
+      match:
+        alertname: CPUThrottlingHigh
+        container: configmap-registry-server
+    - receiver: "null"
+      match:
+        alertname: NodeFilesystemSpaceFillingUp
+        severity: warning
+    - receiver: "null"
+      match:
+        namespace: openshift-customer-monitoring
+    - receiver: "null"
+      match:
+        namespace: openshift-operators
+    - receiver: "null"
+      match:
+        alertname: SLAUptimeSRE
+    - receiver: "null"
+      match:
+        alertname: CustomResourceDetected
+    - receiver: "null"
+      match:
+        alertname: ImagePruningDisabled
+    - receiver: "null"
+      match:
+        severity: info
+    - receiver: make-it-warning
+      match:
+        alertname: KubeAPILatencyHigh
+        severity: critical
+    - receiver: pagerduty
+      match_re:
+        exported_namespace: ^default$|^kube.*|^openshift.*|^redhat-.*
+    - receiver: pagerduty
+      match:
+        exported_namespace: ""
+      match_re:
+        namespace: ^default$|^kube.*|^openshift.*|^redhat-.*
+    - receiver: pagerduty
+      match:
+        job: fluentd
+    - receiver: pagerduty
+      match:
+        alertname: FluentdNodeDown
+    - receiver: pagerduty
+      match:
+        cluster: elasticsearch
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h
+receivers:
+- name: pagerduty
+  pagerduty_configs:
+  - send_resolved: true
+    http_config: {}
+    routing_key: <secret>
+    url: https://events.pagerduty.com/v2/enqueue
+    client: '{{ template "pagerduty.default.client" . }}'
+    client_url: '{{ template "pagerduty.default.clientURL" . }}'
+    description: '{{ .CommonLabels.alertname }} {{ .CommonLabels.severity | toUpper
+      }} ({{ len .Alerts }})'
+    details:
+      component: '{{ .CommonLabels.alertname }}'
+      firing: '{{ template "pagerduty.default.instances" .Alerts.Firing }}'
+      group: '{{ .CommonLabels.alertname }}'
+      link: '{{ if .CommonAnnotations.link }}{{ .CommonAnnotations.link }}{{ else
+        }}https://github.com/openshift/ops-sop/tree/master/v4/alerts/{{ .CommonLabels.alertname
+        }}.md{{ end }}'
+      link2: '{{ if .CommonAnnotations.runbook }}{{ .CommonAnnotations.runbook }}{{
+        else }}{{ end }}'
+      num_firing: '{{ .Alerts.Firing | len }}'
+      num_resolved: '{{ .Alerts.Resolved | len }}'
+      resolved: '{{ template "pagerduty.default.instances" .Alerts.Resolved }}'
+    severity: '{{ if .CommonLabels.severity }}{{ .CommonLabels.severity | toLower
+      }}{{ else }}critical{{ end }}'
+- name: make-it-warning
+  pagerduty_configs:
+  - send_resolved: true
+    http_config: {}
+    routing_key: <secret>
+    url: https://events.pagerduty.com/v2/enqueue
+    client: '{{ template "pagerduty.default.client" . }}'
+    client_url: '{{ template "pagerduty.default.clientURL" . }}'
+    description: '{{ .CommonLabels.alertname }} {{ .CommonLabels.severity | toUpper
+      }} ({{ len .Alerts }})'
+    details:
+      component: '{{ .CommonLabels.alertname }}'
+      firing: '{{ template "pagerduty.default.instances" .Alerts.Firing }}'
+      group: '{{ .CommonLabels.alertname }}'
+      link: '{{ if .CommonAnnotations.link }}{{ .CommonAnnotations.link }}{{ else
+        }}https://github.com/openshift/ops-sop/tree/master/v4/alerts/{{ .CommonLabels.alertname
+        }}.md{{ end }}'
+      link2: '{{ if .CommonAnnotations.runbook }}{{ .CommonAnnotations.runbook }}{{
+        else }}{{ end }}'
+      num_firing: '{{ .Alerts.Firing | len }}'
+      num_resolved: '{{ .Alerts.Resolved | len }}'
+      resolved: '{{ template "pagerduty.default.instances" .Alerts.Resolved }}'
+    severity: warning
+- name: "null"
+templates: []
+
